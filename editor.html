@@ -2,6 +2,7 @@
 <html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>WebAR テンプレート編集ツール</title>
 <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.1.0/model-viewer.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#f4f6fb;color:#182438;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
 header{padding:22px 24px;background:#152a49;color:#fff}header h1{font-size:23px;margin:0}header p{margin:7px 0 0;color:#d8e4f2}
@@ -17,7 +18,7 @@ model-viewer{width:100%;height:430px;background:#f5f7fa;border-radius:14px}
 .ar-button,.link-button{background:var(--accent,#1268e8);color:#fff;border:0;border-radius:99px;padding:12px 20px;font:inherit;font-weight:700;text-decoration:none;display:inline-block}
 .link-button[hidden]{display:none}
 #pricePreview{font-size:22px;font-weight:700;color:#152a49}
-.status{background:#eff6ff;border-radius:10px;padding:12px;margin-top:18px;font-size:13px;line-height:1.7}
+.export-button{width:100%;border:0;background:#152a49;color:white;padding:15px;border-radius:11px;font:inherit;font-weight:700;cursor:pointer;margin-top:20px}.export-button:disabled{opacity:.5;cursor:wait}.status{background:#eff6ff;border-radius:10px;padding:12px;margin-top:18px;font-size:13px;line-height:1.7}
 @media(max-width:760px){.layout{grid-template-columns:1fr}model-viewer{height:330px}}
 </style></head><body>
 <header><h1>WebAR テンプレート編集ツール</h1><p>設定を変更すると、右側のプレビューに即時反映されます。</p></header>
@@ -33,7 +34,7 @@ model-viewer{width:100%;height:430px;background:#f5f7fa;border-radius:14px}
 <label for="buttonText">リンクボタンの文字</label><input id="buttonText" value="商品について問い合わせる">
 <label for="buttonUrl">リンクURL（任意）</label><input id="buttonUrl" type="url" placeholder="https://example.com">
 <label for="accent">メインカラー（右側の見出し・枠線・ボタンに反映）</label><input id="accent" type="color" value="#1268e8">
-<div class="status" id="status" role="status">初期状態ではサンプルの宇宙飛行士を表示しています。これは編集プレビューです。公開用ファイルの出力機能は次の段階で追加します。</div>
+<button type="button" id="export" class="export-button">公開用ZIPをダウンロード</button><div class="status" id="status" role="status">GLBを選択すると、設定内容とモデルをまとめた公開用ZIPを出力できます。iPhone用ARにはUSDZも指定してください。</div>
 </section>
 <section class="preview" id="preview">
 <h2 id="titlePreview"></h2><p id="descriptionPreview"></p>
@@ -67,11 +68,70 @@ model-viewer{width:100%;height:430px;background:#f5f7fa;border-radius:14px}
      if(!file.name.toLowerCase().endsWith(ext)){el("status").textContent=ext+"ファイルを選択してください。";return;}
      if(previous())URL.revokeObjectURL(previous());
      const url=URL.createObjectURL(file);setter(url);viewer.setAttribute(attr,url);
-     el("status").textContent=file.name+" を読み込みました。現在は編集プレビューのみです。";
+     el("status").textContent=file.name+" を読み込みました。をプレビューに反映しました。";
    });
  };
  loadFile("modelFile",".glb",()=>glbUrl,v=>{glbUrl=v},"src");
  loadFile("iosFile",".usdz",()=>usdzUrl,v=>{usdzUrl=v},"ios-src");
+
+ const escapeHtml=value=>String(value).replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+ const exportZip=async()=>{
+   const glb=el("modelFile").files[0];
+   const usdz=el("iosFile").files[0];
+   if(!glb||!glb.name.toLowerCase().endsWith(".glb")){el("status").textContent="公開用ZIPの出力にはGLBファイルを選択してください。";return;}
+   if(usdz&&!usdz.name.toLowerCase().endsWith(".usdz")){el("status").textContent="iPhone用モデルはUSDZファイルを選択してください。";return;}
+   if(!window.JSZip){el("status").textContent="ZIPライブラリを読み込めませんでした。ネット接続を確認して再読み込みしてください。";return;}
+   const button=el("export");button.disabled=true;button.textContent="ZIPを作成中…";
+   try{
+     const zip=new JSZip();
+     zip.file("models/product.glb",glb);
+     if(usdz)zip.file("models/product.usdz",usdz);
+     const data={
+       title:el("title").value,description:el("description").value,price:el("price").value,
+       buttonText:el("buttonText").value,buttonUrl:/^https?:\\/\\//i.test(el("buttonUrl").value.trim())?el("buttonUrl").value.trim():"",
+       accentColor:el("accent").value,modelUrl:"./models/product.glb",
+       iosModelUrl:usdz?"./models/product.usdz":"",modelAlt:el("title").value||"3Dモデル"
+     };
+     const config="window.WEBAR_CONFIG = "+JSON.stringify(data,null,2).replace(/</g,"\\u003c")+";\\n";
+     zip.file("config.js",config);
+     const page=`<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${escapeHtml(data.title||"WebAR商品プレビュー")}</title>
+<script src="./config.js"><\/script>
+<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.1.0/model-viewer.min.js"><\/script>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f3f6fa;color:#182438;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:850px;margin:auto;padding:30px 18px;text-align:center}
+h1{color:var(--accent);font-size:clamp(24px,5vw,36px)}
+p{color:#536477;line-height:1.7}
+.viewer{background:white;border:2px solid var(--accent);border-radius:18px;overflow:hidden}
+model-viewer{width:100%;height:min(65vh,560px);min-height:330px}
+.ar-button,.cta{border:0;border-radius:99px;padding:13px 22px;background:var(--accent);color:white;font:inherit;font-weight:700;text-decoration:none;display:inline-block}
+.price{font-size:22px;font-weight:700}.note{font-size:13px}
+</style></head><body><main>
+<h1 id="title"></h1><p id="description"></p>
+<div class="viewer"><model-viewer id="viewer" camera-controls auto-rotate ar ar-modes="webxr scene-viewer quick-look" shadow-intensity="1" alt="3Dモデル"><button slot="ar-button" class="ar-button">ARで表示する</button></model-viewer></div>
+<p id="price" class="price" hidden></p><a id="cta" class="cta" hidden rel="noopener noreferrer"></a>
+<p class="note">モデルをドラッグして360°確認できます。ARの利用には対応端末が必要です。</p>
+</main><script>
+(()=>{const c=window.WEBAR_CONFIG||{},el=id=>document.getElementById(id);
+el("title").textContent=c.title||"WebAR商品プレビュー";el("description").textContent=c.description||"";
+document.documentElement.style.setProperty("--accent",c.accentColor||"#1268e8");
+const v=el("viewer");v.setAttribute("src",c.modelUrl);if(c.iosModelUrl)v.setAttribute("ios-src",c.iosModelUrl);v.setAttribute("alt",c.modelAlt||"3Dモデル");
+if(c.price){el("price").textContent=c.price;el("price").hidden=false;}
+if(c.buttonUrl&&/^https?:\\/\\//i.test(c.buttonUrl)){el("cta").href=c.buttonUrl;el("cta").textContent=c.buttonText||"詳しく見る";el("cta").hidden=false;}
+})();
+<\/script></body></html>`;
+     zip.file("index.html",page);
+     zip.file("README.txt","WebAR 公開用テンプレート\\n\\n1. ZIPを解凍します。\\n2. index.html、config.js、modelsフォルダをまとめてGitHub Pages等のHTTPSサイトにアップロードします。\\n3. 公開URLを対応スマホで開いて動作を確認してください。\\n4. 商品情報はconfig.jsで編集できます。\\n\\niPhoneでAR表示する場合はUSDZファイルを指定してください。端末・ブラウザによってAR対応状況が異なります。\\nmodel-viewerはCDNから読み込むため、表示時にネット接続が必要です。\\nアップロードする3Dモデルの利用・再配布権限を確認してください。\\n");
+     const blob=await zip.generateAsync({type:"blob",compression:"DEFLATE",compressionOptions:{level:6}});
+     const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="webar-product.zip";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
+     el("status").textContent="ZIPを作成しました。解凍してGitHub PagesなどのHTTPS環境へアップロードしてください。";
+   }catch(e){el("status").textContent="ZIPの作成に失敗しました: "+(e.message||e);}
+   finally{button.disabled=false;button.textContent="公開用ZIPをダウンロード";}
+ };
+ el("export").addEventListener("click",exportZip);
+
  window.addEventListener("pagehide",()=>{if(glbUrl)URL.revokeObjectURL(glbUrl);if(usdzUrl)URL.revokeObjectURL(usdzUrl);});
  update();
 })();
