@@ -45,7 +45,7 @@ const templates=[
  ['tray','小物トレー','底・側面',g=>{add(g,'底板',box(2,.12,1.4),0x94a3b8,0,.06,0);for(const [n,x,z,w,d] of [['前',0,.65,2,.1],['後',0,-.65,2,.1],['左',-.95,0,.1,1.3],['右',.95,0,.1,1.3]])add(g,n+'側面',box(w,.5,d),0x64748b,x,.3,z)}],
  ['cable','ケーブルホルダー','台座・仕切り',g=>{add(g,'台座',box(1.8,.15,.65),0x475569,0,.075,0);for(let i=0;i<4;i++)add(g,'仕切り'+(i+1),box(.12,.48,.65),0x60a5fa,-.78+i*.52,.32,0)}],
  ['bracket','L字ブラケット','底板・縦板',g=>{add(g,'底板',box(1.5,.18,.9),0x64748b,0,.09,0);add(g,'縦板',box(1.5,1.1,.18),0x64748b,0,.64,-.36)}],
- ['pen','ペン立て','底・壁',g=>{add(g,'中空のペン立て',hollowCup(.62,1.4,.12),0x60a5fa)}]
+ ['pen','ペン立て','底・壁',g=>{add(g,'底板',new THREE.CylinderGeometry(.62,.62,.12,64),0x2563eb,0,.06,0);add(g,'側壁',new THREE.CylinderGeometry(.62,.62,1.28,64,1,true),0x60a5fa,0,.76,0);add(g,'内側の壁',new THREE.CylinderGeometry(.50,.50,1.28,64,1,true),0x60a5fa,0,.76,0);add(g,'上端リング',new THREE.LatheGeometry([new THREE.Vector2(.50,0),new THREE.Vector2(.62,0)],64),0x60a5fa,0,1.4,0)}]
 ];
 for(const [id,name,description] of templates){const option=document.createElement('option');option.value=id;option.textContent=name+'（'+description+'）';$('templates').append(option)}
 $('templates').addEventListener('change',e=>{const item=templates.find(t=>t[0]===e.target.value);if(item)loadTemplate(item[0],item[3])});
