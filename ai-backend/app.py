@@ -46,9 +46,8 @@ async def generate(image: UploadFile = File(...)):
             img.verify()
     except (UnidentifiedImageError, OSError):
         raise HTTPException(400, "Invalid image")
-    async with asyncio.timeout(600):
-        with tempfile.TemporaryDirectory(prefix="glbstudio-") as folder:
-            temp = Path(folder)
+    with tempfile.TemporaryDirectory(prefix="glbstudio-") as folder:
+        temp = Path(folder)
             input_file = temp / ("input.jpg" if image.content_type == "image/jpeg" else "input.png")
             if image.content_type == "image/webp":
                 from PIL import Image
