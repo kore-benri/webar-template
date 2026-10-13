@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WebAR テンプレート編集ツール</title>
+<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.1.0/model-viewer.min.js"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f4f6fb;color:#182438;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+header{padding:22px 24px;background:#152a49;color:#fff}header h1{font-size:23px;margin:0}header p{margin:7px 0 0;color:#d8e4f2}
+.layout{display:grid;grid-template-columns:minmax(280px,380px) minmax(0,1fr);gap:24px;max-width:1200px;margin:28px auto;padding:0 18px}
+.panel,.preview{background:#fff;border:1px solid #dce4ed;border-radius:18px;padding:22px;box-shadow:0 6px 22px #1734510a}
+label{display:block;font-weight:650;font-size:14px;margin:16px 0 6px}
+input,textarea{display:block;width:100%;padding:11px;border:1px solid #c5d0dd;border-radius:9px;font:inherit}
+input[type=color]{height:46px;padding:4px}input[type=file]{font-size:13px}
+textarea{min-height:85px;resize:vertical}
+small{display:block;color:#60718a;line-height:1.6;margin-top:6px}
+model-viewer{width:100%;height:430px;background:#f5f7fa;border-radius:14px}
+.preview h2{font-size:24px}.preview p{color:#596b81;line-height:1.6}
+.ar-button,.link-button{background:var(--accent,#1268e8);color:#fff;border:0;border-radius:99px;padding:12px 20px;font:inherit;font-weight:700;text-decoration:none;display:inline-block}
+.link-button[hidden]{display:none}
+#pricePreview{font-size:22px;font-weight:700;color:#152a49}
+.status{background:#eff6ff;border-radius:10px;padding:12px;margin-top:18px;font-size:13px;line-height:1.7}
+@media(max-width:760px){.layout{grid-template-columns:1fr}model-viewer{height:330px}}
+</style></head><body>
+<header><h1>WebAR テンプレート編集ツール</h1><p>設定を変更すると、右側のプレビューに即時反映されます。</p></header>
+<div class="layout">
+<section class="panel"><h2>商品設定</h2>
+<label for="modelFile">3Dモデル（.glb）</label><input id="modelFile" type="file" accept=".glb,model/gltf-binary">
+<small>PC上のGLBを読み込みます。ファイルはサーバーへ送信しません。</small>
+<label for="iosFile">iPhone用モデル（.usdz・任意）</label><input id="iosFile" type="file" accept=".usdz,model/vnd.usdz+zip">
+<small>iPhoneのAR表示には通常USDZが必要です。GLBからの自動変換は行いません。</small>
+<label for="title">商品名</label><input id="title" value="WebAR 商品プレビュー">
+<label for="description">説明文</label><textarea id="description">スマホで商品を360°確認。対応端末ならARでも体験できます。</textarea>
+<label for="price">価格（任意）</label><input id="price" placeholder="例：¥3,980">
+<label for="buttonText">リンクボタンの文字</label><input id="buttonText" value="商品について問い合わせる">
+<label for="buttonUrl">リンクURL（任意）</label><input id="buttonUrl" type="url" placeholder="https://example.com">
+<label for="accent">メインカラー</label><input id="accent" type="color" value="#1268e8">
+<div class="status" id="status" role="status">初期状態ではサンプルの宇宙飛行士を表示しています。これは編集プレビューです。公開用ファイルの出力機能は次の段階で追加します。</div>
+</section>
+<section class="preview" id="preview">
+<h2 id="titlePreview"></h2><p id="descriptionPreview"></p>
+<model-viewer id="viewer" src="https://modelviewer.dev/shared-assets/models/Astronaut.glb" ios-src="https://modelviewer.dev/shared-assets/models/Astronaut.usdz" alt="3Dモデル" camera-controls auto-rotate ar ar-modes="webxr scene-viewer quick-look" shadow-intensity="1">
+<button slot="ar-button" class="ar-button">ARで表示する</button>
+</model-viewer>
+<p id="pricePreview" hidden></p><a id="linkPreview" class="link-button" hidden target="_blank" rel="noopener noreferrer"></a>
+<small>ローカルファイルのAR起動はブラウザ・OSにより制限される場合があります。公開用の動作確認はHTTPSで行ってください。</small>
+</section></div>
+<script>
+(() => {
+ const ids=["title","description","price","buttonText","buttonUrl","accent"];
+ const el=id=>document.getElementById(id);
+ const viewer=el("viewer");
+ let glbUrl=null,usdzUrl=null;
+ const update=()=>{
+   el("titlePreview").textContent=el("title").value;
+   el("descriptionPreview").textContent=el("description").value;
+   el("pricePreview").textContent=el("price").value;
+   el("pricePreview").hidden=!el("price").value.trim();
+   el("preview").style.setProperty("--accent",el("accent").value);
+   const url=el("buttonUrl").value.trim();
+   const link=el("linkPreview");
+   if(/^https?:\/\//i.test(url)){link.href=url;link.textContent=el("buttonText").value||"詳しく見る";link.hidden=false;}
+   else{link.hidden=true;link.removeAttribute("href");}
+ };
+ ids.forEach(id=>el(id).addEventListener("input",update));
+ const loadFile=(id,ext,previous,setter,attr)=>{
+   el(id).addEventListener("change",()=>{
+     const file=el(id).files[0];if(!file)return;
+     if(!file.name.toLowerCase().endsWith(ext)){el("status").textContent=ext+"ファイルを選択してください。";return;}
+     if(previous())URL.revokeObjectURL(previous());
+     const url=URL.createObjectURL(file);setter(url);viewer.setAttribute(attr,url);
+     el("status").textContent=file.name+" を読み込みました。現在は編集プレビューのみです。";
+   });
+ };
+ loadFile("modelFile",".glb",()=>glbUrl,v=>{glbUrl=v},"src");
+ loadFile("iosFile",".usdz",()=>usdzUrl,v=>{usdzUrl=v},"ios-src");
+ window.addEventListener("pagehide",()=>{if(glbUrl)URL.revokeObjectURL(glbUrl);if(usdzUrl)URL.revokeObjectURL(usdzUrl);});
+ update();
+})();
+</script></body></html>
