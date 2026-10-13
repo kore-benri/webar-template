@@ -34,6 +34,16 @@ model-viewer{width:100%;height:430px;background:#f5f7fa;border-radius:14px}
 <label for="buttonText">リンクボタンの文字</label><input id="buttonText" value="商品について問い合わせる">
 <label for="buttonUrl">リンクURL（任意）</label><input id="buttonUrl" type="url" placeholder="https://example.com">
 <label for="accent">メインカラー（右側の見出し・枠線・ボタンに反映）</label><input id="accent" type="color" value="#1268e8">
+<h2>3Dモデル調整</h2>
+<small>モデルの見た目・配置を調整します。元のGLBデータは変更しません。</small>
+<label for="scale">サイズ <output id="scaleValue">1.0倍</output></label><input id="scale" type="range" min="0.2" max="3" step="0.1" value="1">
+<label for="rotate">横回転 <output id="rotateValue">0°</output></label><input id="rotate" type="range" min="-180" max="180" step="5" value="0">
+<label for="moveX">左右位置 <output id="moveXValue">0m</output></label><input id="moveX" type="range" min="-2" max="2" step="0.1" value="0">
+<label for="moveY">上下位置 <output id="moveYValue">0m</output></label><input id="moveY" type="range" min="-2" max="2" step="0.1" value="0">
+<label for="exposure">明るさ <output id="exposureValue">1.0</output></label><input id="exposure" type="range" min="0.2" max="2" step="0.1" value="1">
+<label for="shadow">影の濃さ <output id="shadowValue">1.0</output></label><input id="shadow" type="range" min="0" max="2" step="0.1" value="1">
+<label for="bgColor">3D表示の背景色</label><input id="bgColor" type="color" value="#f5f7fa">
+<button type="button" id="resetModel" class="export-button" style="background:#64748b">3D調整をリセット</button>
 <button type="button" id="export" class="export-button">公開用ZIPをダウンロード</button><div class="status" id="status" role="status">GLBを選択すると、設定内容とモデルをまとめた公開用ZIPを出力できます。iPhone用ARにはUSDZも指定してください。</div>
 </section>
 <section class="preview" id="preview">
@@ -46,7 +56,7 @@ model-viewer{width:100%;height:430px;background:#f5f7fa;border-radius:14px}
 </section></div>
 <script>
 (() => {
- const ids=["title","description","price","buttonText","buttonUrl","accent"];
+ const ids=["title","description","price","buttonText","buttonUrl","accent","scale","rotate","moveX","moveY","exposure","shadow","bgColor"];
  const el=id=>document.getElementById(id);
  const viewer=el("viewer");
  let glbUrl=null,usdzUrl=null;
@@ -56,19 +66,28 @@ model-viewer{width:100%;height:430px;background:#f5f7fa;border-radius:14px}
    el("pricePreview").textContent=el("price").value;
    el("pricePreview").hidden=!el("price").value.trim();
    el("preview").style.setProperty("--accent",el("accent").value);
+   const scale=Number(el("scale").value),rot=Number(el("rotate").value),x=Number(el("moveX").value),y=Number(el("moveY").value);
+   viewer.setAttribute("scale",scale+" "+scale+" "+scale);
+   viewer.setAttribute("orientation","0 "+rot+"deg 0");
+   viewer.setAttribute("model-position",x+"m "+y+"m 0m");
+   viewer.setAttribute("exposure",el("exposure").value);
+   viewer.setAttribute("shadow-intensity",el("shadow").value);
+   viewer.style.backgroundColor=el("bgColor").value;
+   for(const [id,suffix] of [["scale","倍"],["rotate","°"],["moveX","m"],["moveY","m"],["exposure",""],["shadow",""]])el(id+"Value").textContent=el(id).value+suffix;
    const url=el("buttonUrl").value.trim();
    const link=el("linkPreview");
    if(/^https?:\/\//i.test(url)){link.href=url;link.textContent=el("buttonText").value||"詳しく見る";link.hidden=false;}
    else{link.hidden=true;link.removeAttribute("href");}
  };
  ids.forEach(id=>el(id).addEventListener("input",update));
+ el("resetModel").addEventListener("click",()=>{for(const [id,value] of Object.entries({scale:"1",rotate:"0",moveX:"0",moveY:"0",exposure:"1",shadow:"1",bgColor:"#f5f7fa"}))el(id).value=value;update();});
  const loadFile=(id,ext,previous,setter,attr)=>{
    el(id).addEventListener("change",()=>{
      const file=el(id).files[0];if(!file)return;
      if(!file.name.toLowerCase().endsWith(ext)){el("status").textContent=ext+"ファイルを選択してください。";return;}
      if(previous())URL.revokeObjectURL(previous());
      const url=URL.createObjectURL(file);setter(url);viewer.setAttribute(attr,url);
-     el("status").textContent=file.name+" を読み込みました。をプレビューに反映しました。";
+     el("status").textContent=file.name+" をプレビューに反映しました。";
    });
  };
  loadFile("modelFile",".glb",()=>glbUrl,v=>{glbUrl=v},"src");
@@ -90,7 +109,8 @@ model-viewer{width:100%;height:430px;background:#f5f7fa;border-radius:14px}
        title:el("title").value,description:el("description").value,price:el("price").value,
        buttonText:el("buttonText").value,buttonUrl:/^https?:\/\//i.test(el("buttonUrl").value.trim())?el("buttonUrl").value.trim():"",
        accentColor:el("accent").value,modelUrl:"./models/product.glb",
-       iosModelUrl:usdz?"./models/product.usdz":"",modelAlt:el("title").value||"3Dモデル"
+       iosModelUrl:usdz?"./models/product.usdz":"",modelAlt:el("title").value||"3Dモデル",
+       scale:Number(el("scale").value),rotate:Number(el("rotate").value),moveX:Number(el("moveX").value),moveY:Number(el("moveY").value),exposure:Number(el("exposure").value),shadow:Number(el("shadow").value),bgColor:el("bgColor").value
      };
      const config="window.WEBAR_CONFIG = "+JSON.stringify(data,null,2).replace(/</g,"\\u003c")+";\n";
      zip.file("config.js",config);
@@ -118,6 +138,7 @@ model-viewer{width:100%;height:min(65vh,560px);min-height:330px}
 el("title").textContent=c.title||"WebAR商品プレビュー";el("description").textContent=c.description||"";
 document.documentElement.style.setProperty("--accent",c.accentColor||"#1268e8");
 const v=el("viewer");v.setAttribute("src",c.modelUrl);if(c.iosModelUrl)v.setAttribute("ios-src",c.iosModelUrl);v.setAttribute("alt",c.modelAlt||"3Dモデル");
+const scale=Number(c.scale)||1;v.setAttribute("scale",scale+" "+scale+" "+scale);v.setAttribute("orientation","0 "+(Number(c.rotate)||0)+"deg 0");v.setAttribute("model-position",(Number(c.moveX)||0)+"m "+(Number(c.moveY)||0)+"m 0m");v.setAttribute("exposure",c.exposure??1);v.setAttribute("shadow-intensity",c.shadow??1);v.style.backgroundColor=c.bgColor||"#f5f7fa";
 if(c.price){el("price").textContent=c.price;el("price").hidden=false;}
 if(c.buttonUrl&&/^https?:\/\//i.test(c.buttonUrl)){el("cta").href=c.buttonUrl;el("cta").textContent=c.buttonText||"詳しく見る";el("cta").hidden=false;}
 })();
