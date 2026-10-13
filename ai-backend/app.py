@@ -48,35 +48,35 @@ async def generate(image: UploadFile = File(...)):
         raise HTTPException(400, "Invalid image")
     with tempfile.TemporaryDirectory(prefix="glbstudio-") as folder:
         temp = Path(folder)
-            input_file = temp / ("input.jpg" if image.content_type == "image/jpeg" else "input.png")
-            if image.content_type == "image/webp":
-                from PIL import Image
-                import io
-                Image.open(io.BytesIO(payload)).convert("RGBA").save(input_file)
-            else:
-                input_file.write_bytes(payload)
-            output_dir = temp / "output"
-            cmd = [
-                sys.executable, str(TRIPOSR_DIR / "run.py"),
-                str(input_file), "--output-dir", str(output_dir),
-                "--device", DEVICE,
-            ]
-            proc = await asyncio.create_subprocess_exec(
-                *cmd, cwd=str(TRIPOSR_DIR),
-                stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
-            )
-            try:
-                stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=570)
-            except asyncio.TimeoutError:
-                proc.kill()
-                await proc.communicate()
-                raise HTTPException(504, "3D generation timed out")
-            if proc.returncode:
-                raise HTTPException(502, "TripoSR failed: " + stderr.decode(errors="replace")[-1000:])
-            meshes = list(output_dir.rglob("mesh.obj"))
-            if not meshes:
-                raise HTTPException(502, "TripoSR did not produce mesh.obj")
-            scene = trimesh.load(meshes[0], force="scene")
-            glb = scene.export(file_type="glb")
-            return Response(content=glb, media_type="model/gltf-binary",
-                            headers={"Content-Disposition": 'attachment; filename="generated.glb"'})
+        input_file = temp / ("input.jpg" if image.content_type == "image/jpeg" else "input.png")
+        if image.content_type == "image/webp":
+            from PIL import Image
+            import io
+            Image.open(io.BytesIO(payload)).convert("RGBA").save(input_file)
+        else:
+            input_file.write_bytes(payload)
+        output_dir = temp / "output"
+        cmd = [
+            sys.executable, str(TRIPOSR_DIR / "run.py"),
+            str(input_file), "--output-dir", str(output_dir),
+            "--device", DEVICE,
+        ]
+        proc = await asyncio.create_subprocess_exec(
+            *cmd, cwd=str(TRIPOSR_DIR),
+            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+        )
+        try:
+            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=570)
+        except asyncio.TimeoutError:
+            proc.kill()
+            await proc.communicate()
+            raise HTTPException(504, "3D generation timed out")
+        if proc.returncode:
+            raise HTTPException(502, "TripoSR failed: " + stderr.decode(errors="replace")[-1000:])
+        meshes = list(output_dir.rglob("mesh.obj"))
+        if not meshes:
+            raise HTTPException(502, "TripoSR did not produce mesh.obj")
+        scene = trimesh.load(meshes[0], force="scene")
+        glb = scene.export(file_type="glb")
+        return Response(content=glb, media_type="model/gltf-binary",
+                        headers={"Content-Disposition": 'attachment; filename="generated.glb"'})
