@@ -47,38 +47,53 @@ function vesselWall(bottomOuter,topOuter,bottomInner,topInner,height){
 }
 function curvedHook(){const points=[new THREE.Vector3(0,.95,.15),new THREE.Vector3(0,.75,.4),new THREE.Vector3(0,.4,.68),new THREE.Vector3(0,.2,.8),new THREE.Vector3(0,.23,1.05),new THREE.Vector3(0,.42,1.14)];return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points),48,.11,12,false)}
 
-function motorcycle(g,detailed=false){
- const metal=0x8b98a8,dark=0x1e293b,accent=detailed?0xc62828:0x3b82f6;
- const rod=(name,a,b,r,color)=>{const v1=new THREE.Vector3(...a),v2=new THREE.Vector3(...b),delta=v2.clone().sub(v1);const mesh=add(g,name,new THREE.CylinderGeometry(r,r,delta.length(),detailed?16:8),color,...v1.clone().add(v2).multiplyScalar(.5).toArray());mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),delta.normalize());return mesh};
- const wheel=(side,x)=>{
-  const tire=add(g,side+'タイヤ',new THREE.TorusGeometry(.57,detailed?.17:.2,detailed?18:8,detailed?56:16),0x171717,x,.73,0);
-  const rim=add(g,side+'ホイール',new THREE.TorusGeometry(.39,.055,10,detailed?48:16),detailed?0xcbd5e1:0x64748b,x,.73,0);
-  add(g,side+'ハブ',new THREE.CylinderGeometry(.14,.14,.32,24),metal,x,.73,0).rotation.x=Math.PI/2;
-  if(detailed)for(let i=0;i<8;i++){const a=i*Math.PI/4;rod(side+'スポーク'+(i+1),[x,.73,0],[x+Math.cos(a)*.38,.73+Math.sin(a)*.38,0],.016,0xcbd5e1)}
- };
- wheel('後輪',-1.2);wheel('前輪',1.35);
- for(const z of [-.25,.25]){
-  rod('フレーム下'+z,[-1.2,.73,z],[.12,.98,z],.055,metal);
-  rod('フレーム上'+z,[-.8,1.72,z],[.12,.98,z],.055,metal);
-  rod('フレーム斜'+z,[-.8,1.72,z],[-1.2,.73,z],.045,metal);
-  rod('フロントフォーク'+z,[1.35,.73,z],[1.05,1.94,z],.065,detailed?0xcbd5e1:metal);
+function motorcycle(g,extra=false){
+ // 車体の横方向をX、奥行きをZとして、バイクらしい輪郭を優先する
+ const black=0x171b22,steel=0x8b9aaa,chrome=0xd5dce4,paint=extra?0xb91c1c:0x2563eb;
+ const rod=(name,p,q,r,color)=>{const a=new THREE.Vector3(...p),b=new THREE.Vector3(...q),d=b.clone().sub(a);const m=add(g,name,new THREE.CylinderGeometry(r,r,d.length(),extra?20:12),color,...a.clone().add(b).multiplyScalar(.5).toArray());m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());return m};
+ const shape=(name,points,depth,color,z=0)=>{const sh=new THREE.Shape();points.forEach(([x,y],i)=>i?sh.lineTo(x,y):sh.moveTo(x,y));sh.closePath();const geo=new THREE.ExtrudeGeometry(sh,{depth,bevelEnabled:true,bevelThickness:.055,bevelSize:.045,bevelSegments:2,steps:1,curveSegments:12});const m=add(g,name,geo,color,0,0,z-depth/2);return m};
+ const wheels=[[-1.35,'後輪'],[1.35,'前輪']];
+ for(const [x,name] of wheels){
+  add(g,name+'ゴムタイヤ',new THREE.TorusGeometry(.58,.145,extra?20:12,extra?64:32),black,x,.7,0);
+  add(g,name+'ホイールリム',new THREE.TorusGeometry(.42,.055,12,extra?56:32),chrome,x,.7,0);
+  for(let i=0;i<(extra?10:6);i++){const t=i*Math.PI*2/(extra?10:6);rod(name+'スポーク'+i,[x,.7,-.02],[x+Math.cos(t)*.41,.7+Math.sin(t)*.41,-.02],.024,steel)}
+  add(g,name+'車軸',new THREE.CylinderGeometry(.12,.12,.46,24),steel,x,.7,0).rotation.x=Math.PI/2;
  }
- const tank=add(g,'燃料タンク',new THREE.SphereGeometry(1, detailed?32:10,detailed?20:8),accent,-.15,1.67,0);tank.scale.set(.67,.32,.43);
- const seat=add(g,'シート',box(.95,.14,.68),dark,-.9,1.77,0);
- const engine=add(g,'エンジン本体',new THREE.CylinderGeometry(.35,.35,.58,detailed?32:10),0x475569,-.12,1.02,0);engine.rotation.x=Math.PI/2;
- rod('ハンドルバー',[1.0,2.05,-.58],[1.0,2.05,.58],.055,dark);
- add(g,'ヘッドライト',new THREE.CylinderGeometry(.22,.22,.17,detailed?32:12),0xfde68a,1.18,1.81,0).rotation.z=Math.PI/2;
- if(detailed){
-  for(let i=0;i<5;i++)add(g,'エンジン冷却フィン'+(i+1),box(.62,.035,.66),0x94a3b8,-.12,.84+i*.09,0);
-  rod('マフラー管',[-.1,.86,-.37],[.75,.64,-.44],.07,0xb8c1cc);
-  rod('マフラー', [.75,.64,-.44],[1.27,.7,-.44],.12,0x64748b);
-  add(g,'前ブレーキディスク',new THREE.CylinderGeometry(.28,.28,.025,48),0xcbd5e1,1.35,.73,-.18).rotation.x=Math.PI/2;
-  add(g,'リアサスペンション',new THREE.CylinderGeometry(.07,.07,.66,16),0xeab308,-.91,1.13,-.31).rotation.z=-.4;
-  add(g,'フロントフェンダー',new THREE.TorusGeometry(.7,.055,8,28,Math.PI*.8),accent,1.35,.73,0).rotation.z=.15;
-  add(g,'リアフェンダー',new THREE.TorusGeometry(.7,.05,8,28,Math.PI*.75),accent,-1.2,.73,0);
-  add(g,'テールランプ',box(.15,.13,.4),0xef4444,-1.44,1.78,0);
-  add(g,'メーター',new THREE.CylinderGeometry(.16,.16,.1,24),dark,.84,2.1,0).rotation.z=.4;
-  rod('サイドスタンド',[-.45,1,-.32],[-.67,.18,-.5],.045,metal);
+ for(const z of [-.29,.29]){
+  rod('下側フレーム'+z,[-1.12,.78,z],[-.15,1.12,z],.06,steel);
+  rod('中央フレーム'+z,[-.15,1.12,z],[-.78,1.78,z],.06,steel);
+  rod('上側フレーム'+z,[-.78,1.78,z],[.4,1.64,z],.055,steel);
+  rod('スイングアーム'+z,[-1.35,.7,z],[-.25,1.02,z],.075,steel);
+  rod('フロントフォーク'+z,[1.35,.7,z],[.99,2.02,z],.07,extra?chrome:steel);
+ }
+ shape('燃料タンク',[[ -.78,1.69],[-.52,1.99],[-.08,2.11],[.49,1.97],[.6,1.73],[.2,1.56],[-.51,1.57]],.75,paint);
+ shape('シート',[[ -1.51,1.68],[-1.4,1.83],[-.7,1.85],[-.5,1.74],[-.65,1.66]],.66,black);
+ shape('サイドカバー',[[-.96,1.48],[-.53,1.67],[-.1,1.42],[-.47,1.18]],.62,extra?0x991b1b:0x1d4ed8);
+ const engine=add(g,'エンジンクランクケース',new THREE.CylinderGeometry(.39,.39,.7,extra?40:20),0x475569,-.18,1.05,0);engine.rotation.x=Math.PI/2;
+ add(g,'エンジンシリンダー',box(.49,.51,.57),0x64748b,-.12,1.45,0);
+ for(let i=0;i<(extra?7:4);i++)add(g,'冷却フィン'+i,box(.62,.035,.66),chrome,-.12,1.23+i*.075,0);
+ rod('ハンドルステム',[1,1.97,0],[.88,2.21,0],.065,steel);
+ rod('ハンドルバー',[.88,2.21,-.72],[.88,2.21,.72],.06,black);
+ for(const z of [-.66,.66]){
+  rod('グリップ'+z,[.88,2.21,z],[.88,2.21,z+Math.sign(z)*.16],.095,black);
+  rod('ミラーステー'+z,[.86,2.22,z],[.78,2.55,z+Math.sign(z)*.08],.025,chrome);
+  const mirror=add(g,'バックミラー'+z,new THREE.SphereGeometry(.16,16,12),black,.78,2.57,z+Math.sign(z)*.08);mirror.scale.set(1.15,.67,.32);
+ }
+ add(g,'丸型ヘッドライト',new THREE.CylinderGeometry(.23,.23,.19,32),0xffe7a3,1.12,1.84,0).rotation.z=Math.PI/2;
+ add(g,'テールランプ',box(.14,.13,.4),0xef4444,-1.56,1.82,0);
+ rod('エキゾーストパイプ',[-.02,.94,-.46],[.65,.63,-.47],.075,chrome);
+ rod('マフラー',[.65,.63,-.47],[1.25,.69,-.47],.14,extra?chrome:steel);
+ // タイヤ上部を覆う曲線状フェンダー
+ for(const [x,name] of wheels){const pts=[];for(let i=0;i<=18;i++){const t=Math.PI*.18+i/18*Math.PI*.64;pts.push(new THREE.Vector3(x+Math.cos(t)*.76,.7+Math.sin(t)*.76,0))}add(g,name+'フェンダー',new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),36,.075,10,false),paint)}
+ if(extra){
+  add(g,'前輪ブレーキディスク',new THREE.CylinderGeometry(.31,.31,.025,48),chrome,1.35,.7,-.21).rotation.x=Math.PI/2;
+  add(g,'前輪キャリパー',box(.17,.2,.16),0xf59e0b,1.1,.8,-.25);
+  rod('リアサスペンション',[-1.05,.93,-.33],[-.69,1.62,-.33],.07,0xeab308);
+  rod('チェーン上側',[-1.35,.66,-.35],[-.23,.95,-.35],.025,black);
+  rod('チェーン下側',[-1.35,.59,-.35],[-.23,.85,-.35],.025,black);
+  add(g,'メーターハウジング',new THREE.CylinderGeometry(.15,.15,.1,24),black,.76,2.22,0).rotation.z=.3;
+  rod('サイドスタンド',[-.46,.99,-.37],[-.71,.15,-.54],.045,steel);
+  add(g,'ナンバープレート',box(.38,.24,.035),0xf8fafc,-1.65,1.51,0);
  }
 }
 
