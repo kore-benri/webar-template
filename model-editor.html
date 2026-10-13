@@ -10,7 +10,14 @@ button,.file-label{background:#24344b;border:1px solid #43546b;border-radius:8px
 @media(max-width:850px){header{height:auto;min-height:60px;flex-wrap:wrap;padding:10px}.layout{height:auto;display:flex;flex-direction:column}.viewport{height:55vh;min-height:340px;order:0}.left{order:1}.right{order:2}aside{max-height:none}}
 </style></head><body>
 <header><strong>GLB Studio <span style="font-size:12px;color:#9baecb">試作版</span></strong><label class="file-label" for="file" style="margin:0">GLBを開く</label><input id="file" type="file" accept=".glb,.gltf,model/gltf-binary"><button id="demo">サンプル立方体</button><button id="undo">↶ 戻す</button><button id="redo">↷ やり直す</button><button id="save" class="primary">GLBを保存</button></header>
-<div class="layout"><aside class="left"><h2>図形の追加</h2><div class="toolbar"><button data-add="box">立方体</button><button data-add="sphere">球体</button><button data-add="cylinder">円柱</button></div><button id="duplicate" style="width:100%;margin:12px 0">選択パーツを複製</button><h2>パーツ一覧</h2><div id="tree"></div><p class="status">パーツ名をクリックするか、3D画面上のパーツをクリックして選択できます。</p></aside>
+<div class="layout"><aside class="left"><h2>図形の追加</h2><div class="toolbar"><button data-add="box">立方体</button><button data-add="sphere">球体</button><button data-add="cylinder">円柱</button></div><button id="duplicate" style="width:100%;margin:12px 0">選択パーツを複製</button><h2>写真から立体レリーフ</h2>
+<label class="file-label" for="photo" style="display:block;text-align:center;margin:8px 0">写真を選択</label><input id="photo" type="file" accept="image/png,image/jpeg,image/webp">
+<label for="depth">凹凸の深さ <output id="depthValue">0.6</output></label><input id="depth" type="range" min="0.05" max="2" step="0.05" value="0.6" style="width:100%">
+<label for="resolution">細かさ</label><select id="resolution" style="width:100%;padding:9px;background:#111c2d;color:white;border:1px solid #45546a;border-radius:7px"><option value="64">低（高速）</option><option value="128" selected>標準</option><option value="192">高（重め）</option></select>
+<label for="invert"><input id="invert" type="checkbox"> 明暗を反転</label>
+<button id="makeRelief" style="width:100%;margin:8px 0" disabled>レリーフを生成</button>
+<p class="status">写真の明暗から凹凸を作る方式です。被写体の裏側を推測するAI立体化ではありません。</p>
+<h2>パーツ一覧</h2><div id="tree"></div><p class="status">パーツ名をクリックするか、3D画面上のパーツをクリックして選択できます。</p></aside>
 <main class="viewport"><canvas id="canvas"></canvas><div id="hint">左ドラッグ：回転　右ドラッグ：移動　ホイール：ズーム</div></main>
 <aside class="right"><h2>パーツ編集</h2><div id="selected">未選択</div>
 <h3>操作モード</h3><div class="toolbar"><button data-mode="translate">移動</button><button data-mode="rotate">回転</button><button data-mode="scale">拡縮</button></div>
@@ -71,6 +78,53 @@ $("color").oninput=e=>materialUpdate(m=>{if(m.color)m.color.set(e.target.value)}
 $("remove").onclick=()=>{if(!selected)return;checkpoint();const obj=selected;select(null);obj.parent?.remove(obj);refreshTree();status("選択パーツを削除しました。")};
 $("resetView").onclick=frame;
 $("save").onclick=async()=>{if(!meshes().length){status("保存するモデルがありません。");return;}status("GLBを書き出し中…");try{const data=await new GLTFExporter().parseAsync(root,{binary:true,onlyVisible:true});const blob=new Blob([data],{type:"model/gltf-binary"});const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="edited-model.glb";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);status("GLBを書き出しました。再読み込みして形状と材質を確認してください。")}catch(err){status("書き出しに失敗しました: "+err.message)}};
+
+let photoFile=null;
+$("photo").addEventListener("change",e=>{photoFile=e.target.files[0]||null;$("makeRelief").disabled=!photoFile;if(photoFile)status(photoFile.name+" を選択しました。深さを調整して生成してください。")});
+$("depth").addEventListener("input",e=>$("depthValue").textContent=e.target.value);
+$("makeRelief").onclick=async()=>{
+ if(!photoFile)return;
+ const btn=$("makeRelief");btn.disabled=true;status("写真から凹凸を生成中…");
+ let bitmap;
+ try{
+  bitmap=await createImageBitmap(photoFile);
+  const res=Number($("resolution").value),ratio=bitmap.width/bitmap.height;
+  const w=ratio>=1?res:Math.max(8,Math.round(res*ratio));
+  const h=ratio>=1?Math.max(8,Math.round(res/ratio)):res;
+  const c=document.createElement("canvas");c.width=w;c.height=h;
+  const ctx=c.getContext("2d",{willReadFrequently:true});ctx.drawImage(bitmap,0,0,w,h);
+  const pixels=ctx.getImageData(0,0,w,h).data;
+  const maxSide=3,worldW=ratio>=1?maxSide:maxSide*ratio,worldH=ratio>=1?maxSide/ratio:maxSide;
+  const depth=Number($("depth").value),invert=$("invert").checked;
+  const heights=new Float32Array(w*h);
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+    const i=(y*w+x)*4;
+    const brightness=(pixels[i]*.2126+pixels[i+1]*.7152+pixels[i+2]*.0722)/255;
+    heights[y*w+x]=(invert?1-brightness:brightness)*depth;
+  }
+  const verts=[],uvs=[],indices=[];
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+    verts.push((x/(w-1)-.5)*worldW,heights[y*w+x],(.5-y/(h-1))*worldH);
+    uvs.push(x/(w-1),1-y/(h-1));
+  }
+  for(let y=0;y<h-1;y++)for(let x=0;x<w-1;x++){
+    const a=y*w+x,b=a+1,c=a+w,d=c+1;
+    indices.push(a,c,b,b,c,d);
+  }
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute("position",new THREE.Float32BufferAttribute(verts,3));
+  geo.setAttribute("uv",new THREE.Float32BufferAttribute(uvs,2));
+  geo.setIndex(indices);geo.computeVertexNormals();
+  const texture=new THREE.CanvasTexture(c);texture.colorSpace=THREE.SRGBColorSpace;
+  texture.wrapS=texture.wrapT=THREE.ClampToEdgeWrapping;
+  const material=new THREE.MeshStandardMaterial({map:texture,side:THREE.DoubleSide,roughness:1});
+  const mesh=new THREE.Mesh(geo,material);mesh.name="Photo Relief";
+  checkpoint();root.add(mesh);select(mesh);frame();
+  status("レリーフを生成しました。3D画面で角度を変えて凹凸を確認できます。GLBとして保存可能です。");
+ }catch(err){status("写真の読み込み・生成に失敗しました: "+err.message)}
+ finally{if(bitmap)bitmap.close();btn.disabled=false}
+};
+
 const resize=()=>{const r=canvas.parentElement.getBoundingClientRect();renderer.setSize(r.width,r.height,false);camera.aspect=r.width/r.height;camera.updateProjectionMatrix()};new ResizeObserver(resize).observe(canvas.parentElement);resize();
 historyButtons();function tick(){requestAnimationFrame(tick);orbit.update();renderer.render(scene,camera)}tick();$("demo").click();
 </script></body></html>
