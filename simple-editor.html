@@ -45,20 +45,37 @@ const templates=[
  ['tray','小物トレー','底・側面',g=>{add(g,'底板',box(2,.12,1.4),0x94a3b8,0,.06,0);for(const [n,x,z,w,d] of [['前',0,.65,2,.1],['後',0,-.65,2,.1],['左',-.95,0,.1,1.3],['右',.95,0,.1,1.3]])add(g,n+'側面',box(w,.5,d),0x64748b,x,.3,z)}],
  ['cable','ケーブルホルダー','台座・仕切り',g=>{add(g,'台座',box(1.8,.15,.65),0x475569,0,.075,0);for(let i=0;i<4;i++)add(g,'仕切り'+(i+1),box(.12,.48,.65),0x60a5fa,-.78+i*.52,.32,0)}],
  ['bracket','L字ブラケット','底板・縦板',g=>{add(g,'底板',box(1.5,.18,.9),0x64748b,0,.09,0);add(g,'縦板',box(1.5,1.1,.18),0x64748b,0,.64,-.36)}],
- ['pen','ペン立て','底・壁',g=>{add(g,'底板',new THREE.CylinderGeometry(.62,.62,.12,64),0x2563eb,0,.06,0);add(g,'側壁',new THREE.CylinderGeometry(.62,.62,1.28,64,1,true),0x60a5fa,0,.76,0);add(g,'内側の壁',new THREE.CylinderGeometry(.50,.50,1.28,64,1,true),0x60a5fa,0,.76,0);add(g,'上端リング',new THREE.LatheGeometry([new THREE.Vector2(.50,0),new THREE.Vector2(.62,0)],64),0x60a5fa,0,1.4,0)}]
+ ['pen','ペン立て','底・壁',g=>{add(g,'底板',new THREE.CylinderGeometry(.62,.62,.12,64),0x2563eb,0,.06,0);add(g,'側壁',new THREE.CylinderGeometry(.62,.62,1.28,64,1,true),0x60a5fa,0,.76,0);add(g,'内側の壁',new THREE.CylinderGeometry(.50,.50,1.28,64,1,true),0x60a5fa,0,.76,0);add(g,'上端リング',new THREE.LatheGeometry([new THREE.Vector2(.50,0),new THREE.Vector2(.62,0)],64),0x60a5fa,0,1.4,0)}],
+
+ ['tablet-stand','タブレットスタンド','台座・背板・ストッパー',g=>{add(g,'広い台座',box(2.5,.18,1.65),0x334155,0,.09,0);const back=add(g,'傾斜背板',box(2.25,1.75,.15),0x64748b,0,1,-.48);back.rotation.x=-.23;add(g,'前ストッパー',box(2.3,.28,.2),0x2563eb,0,.26,.68)}],
+ ['headphone-stand','ヘッドホンスタンド','台座・支柱・受け',g=>{add(g,'丸型台座',cylinder(.85,.18),0x334155,0,.09,0);add(g,'支柱',cylinder(.13,2.5),0x64748b,0,1.4,0);add(g,'ヘッドバンド受け',box(1.15,.18,.55),0x2563eb,0,2.73,0)}],
+ ['controller-stand','コントローラースタンド','台座・支持部・前受け',g=>{add(g,'台座',box(1.9,.18,1.5),0x334155,0,.09,0);const rest=add(g,'傾斜支持板',box(1.45,1.05,.16),0x64748b,0,.76,-.3);rest.rotation.x=-.32;add(g,'前受け',box(1.45,.25,.22),0x2563eb,0,.28,.52)}],
+ ['drawer-divider','引き出し用仕切り','底・外枠・仕切り板',g=>{add(g,'底板',box(2.6,.1,1.8),0x94a3b8,0,.05,0);for(const [n,x,z,w,d] of [['前',0,.85,2.6,.1],['後',0,-.85,2.6,.1],['左',-1.25,0,.1,1.7],['右',1.25,0,.1,1.7]])add(g,n+'外枠',box(w,.52,d),0x64748b,x,.31,z);add(g,'中央仕切り',box(.1,.52,1.7),0x2563eb,0,.31,0);add(g,'横仕切り',box(2.5,.52,.1),0x60a5fa,0,.31,0)}],
+ ['card-stand','カードスタンド','台座・カード支持板・前縁',g=>{add(g,'台座',box(1.6,.14,.85),0x334155,0,.07,0);const plate=add(g,'背面支持板',box(1.4,.85,.1),0x64748b,0,.52,-.2);plate.rotation.x=-.2;add(g,'前縁',box(1.4,.2,.12),0x2563eb,0,.2,.32)}],
+ ['s-hook','S字フック','上部カーブ・中央・下部カーブ',g=>{const tube=(name,pts)=>add(g,name,new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts.map(([x,y,z])=>new THREE.Vector3(x,y,z))),40,.11,12,false),0x64748b);tube('上部カーブ',[[-.25,1.5,0],[-.43,1.8,0],[-.22,2.08,0],[.1,2.05,0],[.24,1.82,0]]);tube('中央',[ [.24,1.82,0],[.18,1.4,0],[-.13,.95,0]]);tube('下部カーブ',[[-.13,.95,0],[-.3,.6,0],[-.14,.3,0],[.22,.28,0],[.4,.52,0]])}],
+ ['wire-clip','配線固定クリップ','台座・両側アーム・留め',g=>{add(g,'固定台座',box(1.5,.16,.8),0x334155,0,.08,0);add(g,'左アーム',box(.16,.55,.55),0x2563eb,-.4,.42,0);add(g,'右アーム',box(.16,.55,.55),0x2563eb,.4,.42,0);add(g,'左返し',box(.22,.12,.55),0x60a5fa,-.32,.72,0);add(g,'右返し',box(.22,.12,.55),0x60a5fa,.32,.72,0)}],
+ ['planter','植木鉢','底・外壁・内壁・縁',g=>{add(g,'鉢底',cylinder(.7,.14),0x9a6a4f,0,.07,0);add(g,'外壁',new THREE.CylinderGeometry(.94,.7,1.5,64,1,true),0xc08457,0,.89,0);add(g,'内壁',new THREE.CylinderGeometry(.81,.57,1.5,64,1,true),0xb77951,0,.89,0);add(g,'上縁',new THREE.LatheGeometry([new THREE.Vector2(.81,0),new THREE.Vector2(.94,0)],64),0x9a6a4f,0,1.64,0)}],
+ ['bookend','ブックエンド','底板・背板・補強',g=>{add(g,'底板',box(1.5,.13,1.45),0x334155,0,.065,0);add(g,'背板',box(1.5,1.85,.13),0x64748b,0,.99,-.66);add(g,'補強リブ',box(.14,.7,.5),0x2563eb,0,.46,-.43)}],
+ ['keychain','キーホルダー','本体プレート・穴リング・飾り',g=>{add(g,'タグ本体',box(1.55,.14,.75),0x60a5fa,0,.07,0);add(g,'リング外周',new THREE.TorusGeometry(.23,.065,12,48),0x64748b,-.95,.07,0).rotation.x=Math.PI/2;add(g,'飾りプレート',box(.55,.04,.36),0x2563eb,.32,.16,0)}],
 ];
 // カテゴリ定義とテンプレートIDの対応を分離し、今後の追加を簡単にする
 const categories=[
  {id:'basic',name:'基本図形'},
  {id:'gadget',name:'スマホ・ガジェット'},
  {id:'storage',name:'収納・整理'},
- {id:'diy',name:'DIY・工具'}
+ {id:'diy',name:'DIY・工具'},
+ {id:'interior',name:'インテリア・雑貨'},
+ {id:'original',name:'オリジナルグッズ'}
 ];
 const templateCategories={
  cube:'basic',cylinder:'basic',sphere:'basic',
  'phone-stand':'gadget',cable:'gadget',
  tray:'storage',pen:'storage',
- hook:'diy',bracket:'diy'
+ hook:'diy',bracket:'diy',
+ 'tablet-stand':'gadget','headphone-stand':'gadget','controller-stand':'gadget',
+ 'drawer-divider':'storage','card-stand':'storage',
+ 's-hook':'diy','wire-clip':'diy',
+ planter:'interior',bookend:'interior',keychain:'original'
 };
 const templateMap=new Map(templates.map(t=>[t[0],t]));
 for(const category of categories){
