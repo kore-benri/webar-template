@@ -1,30 +1,43 @@
 <!doctype html>
-<html lang="ja">
-<head>
+<html lang="ja"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>WebAR 商品プレビュー</title>
-<meta name="description" content="スマホで3DモデルをAR表示できる無料デモ">
+<meta name="description" content="スマホで商品をAR表示できるWebARテンプレート">
+<script src="./config.js"></script>
 <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.1.0/model-viewer.min.js"></script>
 <style>
 *{box-sizing:border-box}body{margin:0;background:#f3f6fa;color:#182438;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
-main{max-width:900px;margin:auto;padding:32px 18px;text-align:center}h1{font-size:clamp(24px,5vw,36px);margin:0 0 10px}p{color:#536477;line-height:1.7}
-.viewer{background:white;border:1px solid #e0e7ef;border-radius:20px;overflow:hidden;box-shadow:0 12px 32px #1b365016;margin-top:24px}
+main{max-width:900px;margin:auto;padding:32px 18px;text-align:center}
+h1{font-size:clamp(24px,5vw,36px);margin:0 0 10px}p{color:#536477;line-height:1.7}
+.viewer{background:#fff;border:1px solid #e0e7ef;border-radius:20px;overflow:hidden;box-shadow:0 12px 32px #1b365016;margin-top:24px}
 model-viewer{width:100%;height:min(65vh,560px);min-height:360px;--poster-color:transparent}
-.ar-button{border:0;border-radius:99px;padding:14px 24px;background:#1268e8;color:white;font-size:16px;font-weight:700;cursor:pointer;box-shadow:0 6px 20px #1268e844}
-.note{font-size:13px;margin:18px 0 0}
-</style>
-</head>
-<body><main>
-<h1>WebAR 商品プレビュー</h1>
-<p>3Dモデルをドラッグして回転・拡大できます。対応スマートフォンならAR表示も試せます。</p>
-<div class="viewer">
-<model-viewer src="https://modelviewer.dev/shared-assets/models/Astronaut.glb"
-ios-src="https://modelviewer.dev/shared-assets/models/Astronaut.usdz"
-alt="宇宙飛行士の3Dモデル" camera-controls auto-rotate ar
-ar-modes="webxr scene-viewer quick-look" shadow-intensity="1" exposure="1"
-touch-action="pan-y">
+.ar-button,.cta{border:0;border-radius:99px;padding:14px 24px;background:var(--accent,#1268e8);color:#fff;font-size:16px;font-weight:700;cursor:pointer;box-shadow:0 6px 20px #1268e844;text-decoration:none;display:inline-block}
+.note{font-size:13px;margin:18px 0 0}.price{font-size:22px;font-weight:700;color:#182438}.cta{margin:12px 0}
+</style></head><body><main>
+<h1 id="title"></h1><p id="description"></p>
+<div class="viewer"><model-viewer id="product-model" camera-controls auto-rotate ar ar-modes="webxr scene-viewer quick-look" shadow-intensity="1" exposure="1" touch-action="pan-y">
 <button class="ar-button" slot="ar-button">ARで表示する</button>
-</model-viewer>
-</div>
-<p class="note">AR機能は端末・ブラウザの対応状況によって利用できない場合があります。デモ用モデルは外部配信です。</p>
-</main></body></html>
+</model-viewer></div>
+<p class="price" id="price" hidden></p>
+<a id="cta" class="cta" hidden rel="noopener noreferrer"></a>
+<p class="note">モデルをドラッグして360°確認できます。AR機能は端末・ブラウザの対応状況によって異なります。</p>
+</main>
+<script>
+(() => {
+  const c = window.WEBAR_CONFIG || {};
+  const text = (id, value) => { document.getElementById(id).textContent = value || ""; };
+  text("title", c.title || "WebAR 商品プレビュー");
+  text("description", c.description);
+  document.title = c.title || document.title;
+  document.documentElement.style.setProperty("--accent", c.accentColor || "#1268e8");
+  const model = document.getElementById("product-model");
+  model.setAttribute("src", c.modelUrl || "");
+  if (c.iosModelUrl) model.setAttribute("ios-src", c.iosModelUrl);
+  model.setAttribute("alt", c.modelAlt || "3Dモデル");
+  if (c.price) { text("price", c.price); document.getElementById("price").hidden = false; }
+  if (c.buttonUrl && /^https?:\/\//i.test(c.buttonUrl)) {
+    const link = document.getElementById("cta");
+    link.href = c.buttonUrl; link.textContent = c.buttonText || "詳しく見る"; link.hidden = false;
+  }
+})();
+</script></body></html>
