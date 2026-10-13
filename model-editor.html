@@ -12,7 +12,7 @@ button,.file-label{background:#24344b;border:1px solid #43546b;border-radius:8px
 <header><strong>GLB Studio <span style="font-size:12px;color:#9baecb">試作版</span></strong><label class="file-label" for="file" style="margin:0">GLBを開く</label><input id="file" type="file" accept=".glb,.gltf,model/gltf-binary"><button id="demo">サンプル立方体</button><button id="undo">↶ 戻す</button><button id="redo">↷ やり直す</button><button id="save" class="primary">GLBを保存</button></header>
 <div class="layout"><aside class="left"><h2>図形の追加</h2><div class="toolbar"><button data-add="box">立方体</button><button data-add="sphere">球体</button><button data-add="cylinder">円柱</button></div><button id="duplicate" style="width:100%;margin:12px 0">選択パーツを複製</button><h2>写真から立体レリーフ</h2>
 <label class="file-label" for="photo" style="display:block;text-align:center;margin:8px 0">写真を選択</label><input id="photo" type="file" accept="image/png,image/jpeg,image/webp">
-<label for="depth">凹凸の深さ <output id="depthValue">0.6</output></label><input id="depth" type="range" min="0.05" max="2" step="0.05" value="0.6" style="width:100%">
+<div id="cropWrap" style="display:none"><canvas id="cropCanvas" style="width:100%;touch-action:none;border:1px solid #5b7295"></canvas><p class="status">ドラッグして商品部分を囲む</p><button id="cropReset">範囲リセット</button></div><label>背景除去 <input id="bgRemove" type="checkbox"></label><label>滑らかさ <input id="smooth" type="range" min="0" max="6" value="3"></label><label for="depth">凹凸の深さ <output id="depthValue">0.6</output></label><input id="depth" type="range" min="0.05" max="2" step="0.05" value="0.6" style="width:100%">
 <label for="resolution">細かさ</label><select id="resolution" style="width:100%;padding:9px;background:#111c2d;color:white;border:1px solid #45546a;border-radius:7px"><option value="64">低（高速）</option><option value="128" selected>標準</option><option value="192">高（重め）</option></select>
 <label for="invert"><input id="invert" type="checkbox"> 明暗を反転</label>
 <button id="makeRelief" style="width:100%;margin:8px 0" disabled>レリーフを生成</button>
@@ -79,32 +79,40 @@ $("remove").onclick=()=>{if(!selected)return;checkpoint();const obj=selected;sel
 $("resetView").onclick=frame;
 $("save").onclick=async()=>{if(!meshes().length){status("保存するモデルがありません。");return;}status("GLBを書き出し中…");try{const data=await new GLTFExporter().parseAsync(root,{binary:true,onlyVisible:true});const blob=new Blob([data],{type:"model/gltf-binary"});const url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="edited-model.glb";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);status("GLBを書き出しました。再読み込みして形状と材質を確認してください。")}catch(err){status("書き出しに失敗しました: "+err.message)}};
 
-let photoFile=null;
-$("photo").addEventListener("change",e=>{photoFile=e.target.files[0]||null;$("makeRelief").disabled=!photoFile;if(photoFile)status(photoFile.name+" を選択しました。深さを調整して生成してください。")});
+let photoFile=null,photoBitmap=null,crop=null,start=null;
+const cropCanvas=$("cropCanvas");
+function drawCrop(){if(!photoBitmap)return;const c=cropCanvas,ctx=c.getContext("2d");ctx.drawImage(photoBitmap,0,0,c.width,c.height);if(crop){ctx.strokeStyle="#00baff";ctx.lineWidth=3;ctx.strokeRect(crop.x,crop.y,crop.w,crop.h)}}
+function point(e){const r=cropCanvas.getBoundingClientRect();return{x:(e.clientX-r.left)*cropCanvas.width/r.width,y:(e.clientY-r.top)*cropCanvas.height/r.height}}
+cropCanvas.onpointerdown=e=>{start=point(e);cropCanvas.setPointerCapture(e.pointerId)};
+cropCanvas.onpointermove=e=>{if(!start)return;const p=point(e);crop={x:Math.max(0,Math.min(start.x,p.x)),y:Math.max(0,Math.min(start.y,p.y)),w:Math.abs(p.x-start.x),h:Math.abs(p.y-start.y)};drawCrop()};
+cropCanvas.onpointerup=()=>{start=null;if(crop&&(crop.w<5||crop.h<5))crop=null;drawCrop()};
+$("cropReset").onclick=()=>{crop=null;drawCrop()};
+$("photo").addEventListener("change",async e=>{photoFile=e.target.files[0]||null;$("makeRelief").disabled=true;if(photoBitmap)photoBitmap.close();photoBitmap=null;crop=null;$("cropWrap").style.display="none";if(!photoFile)return;try{photoBitmap=await createImageBitmap(photoFile);const k=Math.min(1,420/Math.max(photoBitmap.width,photoBitmap.height));cropCanvas.width=Math.max(1,Math.round(photoBitmap.width*k));cropCanvas.height=Math.max(1,Math.round(photoBitmap.height*k));$("cropWrap").style.display="block";drawCrop();$("makeRelief").disabled=false;status("写真の中の商品をドラッグで囲んでから生成してください。")}catch(err){status("画像の読み込みに失敗: "+err.message)}});
 $("depth").addEventListener("input",e=>$("depthValue").textContent=e.target.value);
 $("makeRelief").onclick=async()=>{
  if(!photoFile)return;
  const btn=$("makeRelief");btn.disabled=true;status("写真から凹凸を生成中…");
  let bitmap;
  try{
-  bitmap=await createImageBitmap(photoFile);
-  const res=Number($("resolution").value),ratio=bitmap.width/bitmap.height;
+  bitmap=photoBitmap;if(!bitmap)throw new Error("画像がありません");
+  const source=crop&&crop.w>5&&crop.h>5?{x:crop.x/cropCanvas.width*bitmap.width,y:crop.y/cropCanvas.height*bitmap.height,w:crop.w/cropCanvas.width*bitmap.width,h:crop.h/cropCanvas.height*bitmap.height}:{x:0,y:0,w:bitmap.width,h:bitmap.height};const res=Number($("resolution").value),ratio=source.w/source.h;
   const w=ratio>=1?res:Math.max(8,Math.round(res*ratio));
   const h=ratio>=1?Math.max(8,Math.round(res/ratio)):res;
   const c=document.createElement("canvas");c.width=w;c.height=h;
-  const ctx=c.getContext("2d",{willReadFrequently:true});ctx.drawImage(bitmap,0,0,w,h);
+  const ctx=c.getContext("2d",{willReadFrequently:true});ctx.drawImage(bitmap,source.x,source.y,source.w,source.h,0,0,w,h);
   const pixels=ctx.getImageData(0,0,w,h).data;
   const maxSide=3,worldW=ratio>=1?maxSide:maxSide*ratio,worldH=ratio>=1?maxSide/ratio:maxSide;
   const depth=Number($("depth").value),invert=$("invert").checked;
-  const heights=new Float32Array(w*h);
+  const heights=new Float32Array(w*h),mask=new Float32Array(w*h);const bg=[0,1,2].map(ch=>(pixels[ch]+pixels[(w-1)*4+ch]+pixels[(h-1)*w*4+ch]+pixels[(h*w-1)*4+ch])/4);
   for(let y=0;y<h;y++)for(let x=0;x<w;x++){
     const i=(y*w+x)*4;
     const brightness=(pixels[i]*.2126+pixels[i+1]*.7152+pixels[i+2]*.0722)/255;
-    heights[y*w+x]=(invert?1-brightness:brightness)*depth;
+    const diff=Math.hypot(pixels[i]-bg[0],pixels[i+1]-bg[1],pixels[i+2]-bg[2]);mask[y*w+x]=$("bgRemove").checked?Math.min(1,Math.max(0,(diff-35)/30)):1;heights[y*w+x]=(invert?1-brightness:brightness)*depth;
   }
+  for(let pass=0;pass<Number($("smooth").value);pass++){const prev=heights.slice();for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){let total=prev[y*w+x]*4;for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]])total+=prev[(y+dy)*w+x+dx];heights[y*w+x]=total/8}}
   const verts=[],uvs=[],indices=[];
   for(let y=0;y<h;y++)for(let x=0;x<w;x++){
-    verts.push((x/(w-1)-.5)*worldW,heights[y*w+x],(.5-y/(h-1))*worldH);
+    verts.push((x/(w-1)-.5)*worldW,heights[y*w+x]*mask[y*w+x],(.5-y/(h-1))*worldH);
     uvs.push(x/(w-1),1-y/(h-1));
   }
   for(let y=0;y<h-1;y++)for(let x=0;x<w-1;x++){
@@ -115,14 +123,14 @@ $("makeRelief").onclick=async()=>{
   geo.setAttribute("position",new THREE.Float32BufferAttribute(verts,3));
   geo.setAttribute("uv",new THREE.Float32BufferAttribute(uvs,2));
   geo.setIndex(indices);geo.computeVertexNormals();
-  const texture=new THREE.CanvasTexture(c);texture.colorSpace=THREE.SRGBColorSpace;
+  if($("bgRemove").checked){const img=ctx.getImageData(0,0,w,h);for(let i=0;i<mask.length;i++)img.data[i*4+3]=Math.round(mask[i]*255);ctx.putImageData(img,0,0)}const texture=new THREE.CanvasTexture(c);texture.colorSpace=THREE.SRGBColorSpace;
   texture.wrapS=texture.wrapT=THREE.ClampToEdgeWrapping;
-  const material=new THREE.MeshStandardMaterial({map:texture,side:THREE.DoubleSide,roughness:1});
+  const material=new THREE.MeshStandardMaterial({map:texture,transparent:$("bgRemove").checked,alphaTest:$("bgRemove").checked?.08:0,side:THREE.DoubleSide,roughness:1});
   const mesh=new THREE.Mesh(geo,material);mesh.name="Photo Relief";
   checkpoint();root.add(mesh);select(mesh);frame();
   status("レリーフを生成しました。3D画面で角度を変えて凹凸を確認できます。GLBとして保存可能です。");
  }catch(err){status("写真の読み込み・生成に失敗しました: "+err.message)}
- finally{if(bitmap)bitmap.close();btn.disabled=false}
+ finally{btn.disabled=false}
 };
 
 const resize=()=>{const r=canvas.parentElement.getBoundingClientRect();renderer.setSize(r.width,r.height,false);camera.aspect=r.width/r.height;camera.updateProjectionMatrix()};new ResizeObserver(resize).observe(canvas.parentElement);resize();
