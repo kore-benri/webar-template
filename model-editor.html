@@ -17,7 +17,7 @@ button,.file-label{background:#24344b;border:1px solid #43546b;border-radius:8px
 <label for="invert"><input id="invert" type="checkbox"> 明暗を反転</label>
 <button id="makeRelief" style="width:100%;margin:8px 0" disabled>レリーフを生成</button>
 <p class="status">写真の明暗から凹凸を作る方式です。被写体の裏側を推測するAI立体化ではありません。</p>
-<h2>パーツ一覧</h2><div id="tree"></div><p class="status">パーツ名をクリックするか、3D画面上のパーツをクリックして選択できます。</p></aside>
+<h2>AIで360°モデル生成（接続準備）</h2><p class="status">別途、画像→GLB生成APIが必要です。未接続ではAI生成できません。</p><label for="aiEndpoint">生成APIのURL（HTTPS）</label><input id="aiEndpoint" type="url" placeholder="https://your-api.example/generate" style="width:100%;padding:9px;background:#111c2d;color:white;border:1px solid #45546a;border-radius:7px"><button id="aiGenerate" style="width:100%;margin:8px 0">切り抜いた写真をAIに送信</button><button id="downloadCrop" style="width:100%;margin:4px 0">切り抜き画像をPNG保存</button><p class="status">APIは画像を multipart/form-data の image で受け取り、GLBバイナリを返す仕様。CORS許可が必要です。APIキーはこの画面に入力しないでください。</p><h2>パーツ一覧</h2><div id="tree"></div><p class="status">パーツ名をクリックするか、3D画面上のパーツをクリックして選択できます。</p></aside>
 <main class="viewport"><canvas id="canvas"></canvas><div id="hint">左ドラッグ：回転　右ドラッグ：移動　ホイール：ズーム</div></main>
 <aside class="right"><h2>パーツ編集</h2><div id="selected">未選択</div>
 <h3>操作モード</h3><div class="toolbar"><button data-mode="translate">移動</button><button data-mode="rotate">回転</button><button data-mode="scale">拡縮</button></div>
@@ -131,6 +131,34 @@ $("makeRelief").onclick=async()=>{
   status("レリーフを生成しました。3D画面で角度を変えて凹凸を確認できます。GLBとして保存可能です。");
  }catch(err){status("写真の読み込み・生成に失敗しました: "+err.message)}
  finally{btn.disabled=false}
+};
+
+
+async function croppedImageBlob(){
+ if(!photoBitmap)throw new Error("先に写真を選択してください。");
+ const source=crop&&crop.w>5&&crop.h>5?{x:crop.x/cropCanvas.width*photoBitmap.width,y:crop.y/cropCanvas.height*photoBitmap.height,w:crop.w/cropCanvas.width*photoBitmap.width,h:crop.h/cropCanvas.height*photoBitmap.height}:{x:0,y:0,w:photoBitmap.width,h:photoBitmap.height};
+ const scale=Math.min(1,1024/Math.max(source.w,source.h));
+ const c=document.createElement("canvas");c.width=Math.max(1,Math.round(source.w*scale));c.height=Math.max(1,Math.round(source.h*scale));
+ c.getContext("2d").drawImage(photoBitmap,source.x,source.y,source.w,source.h,0,0,c.width,c.height);
+ return await new Promise((resolve,reject)=>c.toBlob(b=>b?resolve(b):reject(new Error("PNG変換に失敗しました")),"image/png"));
+}
+$("downloadCrop").onclick=async()=>{try{const blob=await croppedImageBlob(),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="product-crop.png";a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);status("切り抜き画像を保存しました。")}catch(err){status(err.message)}};
+$("aiGenerate").onclick=async()=>{
+ const endpoint=$("aiEndpoint").value.trim();
+ if(!endpoint){status("AI生成APIのURLを設定してください。GitHub Pages単体ではAI生成できません。");return}
+ let parsed;try{parsed=new URL(endpoint);if(parsed.protocol!=="https:"&&!(parsed.hostname==="localhost"||parsed.hostname==="127.0.0.1"))throw Error()}catch{status("HTTPSのAPI URLを入力してください（localhostのみHTTP可）。");return}
+ const button=$("aiGenerate");button.disabled=true;status("画像を送信し、AI生成を待機中…（API側の処理時間がかかります）");
+ try{
+  const blob=await croppedImageBlob(),body=new FormData();body.append("image",blob,"product.png");
+  const response=await fetch(endpoint,{method:"POST",body});
+  if(!response.ok)throw new Error("APIエラー HTTP "+response.status);
+  const data=await response.arrayBuffer();
+  if(data.byteLength<12||new DataView(data).getUint32(0,true)!==0x46546c67)throw new Error("APIの応答がGLB形式ではありません。");
+  const gltf=await new GLTFLoader().parseAsync(data,"");
+  checkpoint();root.add(gltf.scene);select(null);refreshTree();frame();
+  status("AI生成モデルを読み込みました。パーツを選んで編集し、GLB保存できます。");
+ }catch(err){status("AI生成に失敗: "+err.message+"。APIの稼働状況とCORS設定を確認してください。")}
+ finally{button.disabled=false}
 };
 
 const resize=()=>{const r=canvas.parentElement.getBoundingClientRect();renderer.setSize(r.width,r.height,false);camera.aspect=r.width/r.height;camera.updateProjectionMatrix()};new ResizeObserver(resize).observe(canvas.parentElement);resize();
