@@ -104,7 +104,7 @@ const templates=[
  ['bookend','ブックエンド','底板・背板・補強',g=>{add(g,'底板',box(1.5,.13,1.45),0x334155,0,.065,0);add(g,'背板',box(1.5,1.85,.13),0x64748b,0,.99,-.66);add(g,'補強リブ',box(.14,.7,.5),0x2563eb,0,.46,-.43)}],
  ['keychain','キーホルダー','本体プレート・穴リング・飾り',g=>{add(g,'タグ本体',box(1.55,.14,.75),0x60a5fa,0,.07,0);add(g,'リング外周',new THREE.TorusGeometry(.23,.065,12,48),0x64748b,-.95,.07,0).rotation.x=Math.PI/2;add(g,'飾りプレート',box(.55,.04,.36),0x2563eb,.32,.16,0)}],
  ['motorcycle-simple','バイク（シンプル）','ローポリ・パーツ別',g=>motorcycle(g,false)],
- ['motorcycle-detailed','バイク（ディテール）','精細な部品付き・パーツ別',g=>motorcycle(g,true)],
+ ['motorcycle-detailed','バイク（パーツ多め）','部品を追加した簡易モデル',g=>motorcycle(g,true)],
 ];
 // カテゴリ定義とテンプレートIDの対応を分離し、今後の追加を簡単にする
 const categories=[
