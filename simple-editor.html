@@ -18,13 +18,27 @@
 .layout.sketchfab-mode .viewport{min-width:0}
 @media(max-width:800px){.layout.sketchfab-mode{display:flex;flex-direction:column}.layout.sketchfab-mode aside:first-child{max-height:none;overflow:visible}.layout.sketchfab-mode .viewport{min-height:320px;height:52dvh}}
 @media(min-width:801px) and (max-width:1100px){.layout{grid-template-columns:290px minmax(0,1fr) 250px}.layout.sketchfab-mode{grid-template-columns:290px minmax(0,1fr)}}
+.layout.blendkit-mode{grid-template-columns:340px minmax(0,1fr)}
+.layout.blendkit-mode #editPanel{display:none!important}
+.bk-gallery{position:absolute;inset:0;overflow-y:auto;padding:26px 30px;background:#f4f6fb}
+.bk-gallery[hidden]{display:none!important}
+.bk-gallery-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:16px}
+.bk-gallery-heading h2{font-size:21px;margin-bottom:5px}
+.bk-gallery-heading p{margin:0}
+.bk-gallery .bk-grid{grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:16px}
+.bk-gallery .bk-card img{aspect-ratio:4/3}
+.bk-gallery .bk-card span{font-size:13px;line-height:1.4;padding:10px}
+.bk-gallery .bk-card .bk-open{font-size:12px;padding:0 10px 12px}
+.bk-gallery .bk-pages{justify-content:center;gap:20px;padding:20px}
+@media(max-width:800px){.layout.blendkit-mode{display:flex;flex-direction:column}.layout.blendkit-mode .viewport{height:auto;min-height:360px}.bk-gallery{position:relative;min-height:360px;padding:18px}.bk-gallery .bk-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.bk-gallery-heading{display:block}}
+@media(min-width:801px) and (max-width:1100px){.layout.blendkit-mode{grid-template-columns:290px minmax(0,1fr)}}
 </style></head><body>
 <header><strong>GLB Studio <small style="font-size:12px;color:#64748b">かんたん編集</small></strong><label class="upload" for="file" style="margin:0">GLBを開く</label><input id="file" type="file" accept=".glb,model/gltf-binary"><button id="save" class="primary">GLBを保存</button></header>
 <div class="layout" id="studioLayout"><aside><h2>テンプレートから始める</h2><label for="category">カテゴリ</label><select id="category" aria-label="カテゴリを選択"></select><label for="templates" style="margin-top:14px">テンプレート</label><select id="templates" aria-label="テンプレートを選択"><option value="">テンプレートを選択してください</option></select><p>テンプレートを選ぶと現在のモデルが置き換わります。</p><hr style="border:0;border-top:1px solid #e2e8f0;margin:20px 0"><div class="studio-tabs" role="tablist" aria-label="3D素材メニュー"><button type="button" class="studio-tab active" role="tab" id="tab-blendkit" aria-selected="true" aria-controls="panel-blendkit" data-tab="blendkit">素材検索</button><button type="button" class="studio-tab" role="tab" id="tab-sketchfab" aria-selected="false" aria-controls="panel-sketchfab" data-tab="sketchfab">3Dプレビュー</button><button type="button" class="studio-tab" role="tab" id="tab-my" aria-selected="false" aria-controls="panel-my" data-tab="my">マイモデル</button></div>
-<div id="panel-blendkit" role="tabpanel" aria-labelledby="tab-blendkit"><section aria-label="BlenderKit素材ライブラリ"><h2>BlenderKit 素材検索</h2><form id="bkForm" class="bk-search"><input id="bkQuery" type="search" placeholder="例: motorcycle" aria-label="モデル検索キーワード" maxlength="100" required><button type="submit">検索</button></form><div id="bkInfo" class="bk-info" role="status">無料3Dモデルを検索できます。</div><div id="bkResults" class="bk-grid"></div><div id="bkPages" class="bk-pages" hidden><button type="button" id="bkPrev">前へ</button><span id="bkPageLabel"></span><button type="button" id="bkNext">次へ</button></div><p>PR｜Blendkitの3D素材を紹介しています。モデルの取得は公式サイトで行ってください。</p><a class="bk-affiliate" href="https://www.blendkit.com/r/glbstudio" target="_blank" rel="sponsored noopener noreferrer">Blendkit公式サイトへ｜対象プラン10%OFF ↗</a><p class="note">紹介リンク経由の割引はクリックから3日間有効です。購入条件は公式サイトをご確認ください。</p></section></div>
+<div id="panel-blendkit" role="tabpanel" aria-labelledby="tab-blendkit"><section aria-label="BlenderKit素材ライブラリ"><h2>BlenderKit 素材検索</h2><form id="bkForm" class="bk-search"><input id="bkQuery" type="search" placeholder="例: motorcycle" aria-label="モデル検索キーワード" maxlength="100" required><button type="submit">検索</button></form><div id="bkInfo" class="bk-info" role="status">無料3Dモデルを検索できます。</div><p class="note">検索結果は中央に表示されます。素材をクリックするとBlenderKit公式サイトで確認できます。</p><p>PR｜Blendkitの3D素材を紹介しています。モデルの取得は公式サイトで行ってください。</p><a class="bk-affiliate" href="https://www.blendkit.com/r/glbstudio" target="_blank" rel="sponsored noopener noreferrer">Blendkit公式サイトへ｜対象プラン10%OFF ↗</a><p class="note">紹介リンク経由の割引はクリックから3日間有効です。購入条件は公式サイトをご確認ください。</p></section></div>
 <div id="panel-sketchfab" role="tabpanel" aria-labelledby="tab-sketchfab" hidden><h2>Sketchfab 3Dプレビュー</h2><p>Sketchfabの公開モデルを検索して、クリックするだけで3D表示できます。</p><form id="sfSearchForm" class="bk-search"><input id="sfQuery" type="search" placeholder="例: motorcycle, character" aria-label="Sketchfabモデル検索" maxlength="100" required><button type="submit">検索</button></form><div id="sfSearchInfo" class="bk-info" role="status">モデルを検索して選択すると中央に3D表示します。アニメーション付きモデルはビューア内の再生操作を利用できます。</div><div id="sfResults" class="bk-grid"></div><div id="sfPages" class="bk-pages" hidden><button id="sfPrev" type="button">前へ</button><span id="sfPageLabel"></span><button id="sfNext" type="button">次へ</button></div><details style="margin-top:14px"><summary style="cursor:pointer;font-size:12px">モデルURL・IDから表示</summary><form id="sfForm" class="sf-form"><label for="sfModel">モデルURL / ID</label><input id="sfModel" placeholder="SketchfabのモデルURLまたはID" required><button type="submit">3D表示</button></form><div id="sfMessage" class="bk-info" role="status">公開モデルのURLを入力してください。</div></details><a id="sfOfficial" class="bk-affiliate" href="https://sketchfab.com/3d-models" target="_blank" rel="noopener noreferrer">Sketchfab公式サイトで見る ↗</a><p class="note">公式ビューアを埋め込んで表示します。ダウンロード・利用条件はSketchfabの各モデルページでご確認ください。</p></div>
 <div id="panel-my" role="tabpanel" aria-labelledby="tab-my" hidden><h2>マイモデル</h2><p>GLBファイルを開き、中央のキャンバスで編集できます。</p><button type="button" id="myOpen">GLBファイルを選択</button><p>パーツの選択・色・サイズ変更、GLB保存は従来どおり利用できます。</p><h2 style="margin-top:18px">パーツ一覧</h2><div id="parts"></div><p>パーツをクリックして選択できます。分割されていないGLBは、モデル全体を編集できます。</p><a href="./model-editor.html">高機能エディタを開く →</a></div></aside>
-<main class="viewport"><div id="editorViewport" class="editor-viewport"><canvas id="view"></canvas><div class="hint">ドラッグで回転・ピンチやホイールで拡大縮小</div></div><div id="sfViewer" class="sf-viewer sf-main-viewer" hidden><iframe id="sfFrame" title="Sketchfab公式3Dビューア" loading="lazy" allow="autoplay; fullscreen; xr-spatial-tracking" referrerpolicy="strict-origin-when-cross-origin"></iframe></div></main>
+<main class="viewport"><section id="bkGallery" class="bk-gallery" hidden><div class="bk-gallery-heading"><div><h2>BlenderKit 素材一覧</h2><p>気になるモデルを選んで公式サイトで確認できます。</p></div><div id="bkGalleryInfo" class="bk-info" role="status">キーワードを入力して検索してください。</div></div><div id="bkResults" class="bk-grid"></div><div id="bkPages" class="bk-pages" hidden><button type="button" id="bkPrev">前へ</button><span id="bkPageLabel"></span><button type="button" id="bkNext">次へ</button></div></section><div id="editorViewport" class="editor-viewport"><canvas id="view"></canvas><div class="hint">ドラッグで回転・ピンチやホイールで拡大縮小</div></div><div id="sfViewer" class="sf-viewer sf-main-viewer" hidden><iframe id="sfFrame" title="Sketchfab公式3Dビューア" loading="lazy" allow="autoplay; fullscreen; xr-spatial-tracking" referrerpolicy="strict-origin-when-cross-origin"></iframe></div></main>
 <aside id="editPanel"><h2>かんたん編集</h2><div id="selected">GLBを読み込んでください</div><div class="field"><label for="color">色</label><input id="color" type="color" value="#6699cc" disabled></div><div class="field"><div class="row"><label for="size">サイズ</label><output id="sizeValue">100%</output></div><input id="size" type="range" min="25" max="200" value="100" step="5" disabled><p class="note">選択パーツを縦横奥行き同じ倍率で変更します。</p></div><button id="reset" disabled>選択パーツを元に戻す</button><p id="status" role="status">GLBファイルを選択してください。</p></aside></div>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}</script>
 <script type="module">
@@ -200,7 +214,7 @@ $('save').onclick=async()=>{if(!getMeshes().length){status('先にGLBを読み�
 
 
 // Three independent panels: keep editor canvas and current model untouched.
-function syncViewport(){const preview=!$('panel-sketchfab').hidden;$('studioLayout').classList.toggle('sketchfab-mode',preview);$('editPanel').hidden=preview;$('editorViewport').hidden=preview;$('sfViewer').hidden=!preview||!$('sfFrame').getAttribute('src');if(!preview)resize();}
+function syncViewport(){const preview=!$('panel-sketchfab').hidden;const blendkit=!$('panel-blendkit').hidden;const browsing=preview||blendkit;$('studioLayout').classList.toggle('sketchfab-mode',preview);$('studioLayout').classList.toggle('blendkit-mode',blendkit);$('editPanel').hidden=browsing;$('editorViewport').hidden=browsing;$('bkGallery').hidden=!blendkit;$('sfViewer').hidden=!preview||!$('sfFrame').getAttribute('src');if(!browsing)resize();}
 for(const tab of document.querySelectorAll('.studio-tab')){
  tab.addEventListener('click',()=>{
   for(const t of document.querySelectorAll('.studio-tab')){const active=t===tab;t.classList.toggle('active',active);t.setAttribute('aria-selected',String(active));$('panel-'+t.dataset.tab).hidden=!active;}syncViewport();
@@ -281,7 +295,7 @@ async function searchBlenderKit(page=1){
  if(!q)return;
  if(bkController)bkController.abort();
  const controller=new AbortController();bkController=controller;bkBusy=true;
- $('bkInfo').textContent='検索中…';$('bkResults').replaceChildren();$('bkPages').hidden=true;
+ $('bkInfo').textContent='検索中…';$('bkGalleryInfo').textContent='検索中…';$('bkResults').replaceChildren();$('bkPages').hidden=true;
  try{
   const u=new URL(BK_API);u.searchParams.set('q',q);u.searchParams.set('page',String(page));
   const response=await fetch(u,{signal:controller.signal});
@@ -291,7 +305,7 @@ async function searchBlenderKit(page=1){
   bkPage=page;bkHasNext=Boolean(data.nextPage);bkCount=Number(data.count)||0;
   const results=Array.isArray(data.results)?data.results:[];
   $('bkInfo').textContent=bkCount+'件の検索結果'+(results.length?'（このページ '+results.length+'件）':'');
-  if(!results.length)$('bkInfo').textContent+='。該当モデルがありません。';
+  $('bkGalleryInfo').textContent=$('bkInfo').textContent;if(!results.length){$('bkInfo').textContent+='。該当モデルがありません。';$('bkGalleryInfo').textContent=$('bkInfo').textContent;}
   for(const asset of results){
    const card=document.createElement('div');card.className='bk-card';
    const assetId=String(asset.id||'');
@@ -311,7 +325,7 @@ async function searchBlenderKit(page=1){
   $('bkPrev').disabled=bkPage<=1;$('bkNext').disabled=!bkHasNext;
   $('bkPageLabel').textContent=bkPage+' ページ';
  }catch(error){
-  if(error.name!=='AbortError'&&bkController===controller)$('bkInfo').textContent='検索できませんでした: '+error.message;
+  if(error.name!=='AbortError'&&bkController===controller){$('bkInfo').textContent='検索できませんでした: '+error.message;$('bkGalleryInfo').textContent=$('bkInfo').textContent;}
  }finally{if(bkController===controller){bkBusy=false;bkController=null;}}
 }
 $('bkForm').addEventListener('submit',e=>{e.preventDefault();searchBlenderKit(1)});
