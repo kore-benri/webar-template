@@ -237,7 +237,25 @@ function renderAnimations(){const list=$('animList');list.replaceChildren();if(!
 $('animAdd').onclick=()=>{if(!selected)return;animPlaying=false;for(const a of animItems)a.node.quaternion.copy(a.base);const axis=$('animAxis').value,degrees=Number($('animDegrees').value),seconds=Number($('animSeconds').value);if(!Number.isFinite(degrees)||!Number.isFinite(seconds)||seconds<0.2||seconds>60){status('角度と再生時間を確認してください。');return}animItems=animItems.filter(a=>a.node!==selected);animItems.push({node:selected,base:selected.quaternion.clone(),axis,degrees,seconds});renderAnimations();status('アニメーションを設定しました。再生ボタンで確認できます。')};
 $('animPlay').onclick=()=>{if(!animItems.length){status('先にパーツを選んで動きを設定してください。');return}animStart=performance.now();animPlaying=true};
 $('animStop').onclick=()=>{animPlaying=false;for(const a of animItems)a.node.quaternion.copy(a.base);if(selectionBox.visible)selectionBox.update()};
-function buildAnimationClips(){if(!animItems.length)return [];const tracks=[];let duration=0;for(const a of animItems){duration=Math.max(duration,a.seconds);const axis=new THREE.Vector3(a.axis==='x'?1:0,a.axis==='y'?1:0,a.axis==='z'?1:0);const end=a.base.clone().multiply(new THREE.Quaternion().setFromAxisAngle(axis,THREE.MathUtils.degToRad(a.degrees)));tracks.push(new THREE.QuaternionKeyframeTrack(a.node.uuid+'.quaternion',[0,a.seconds],[...a.base.toArray(),...end.toArray()]))}return [new THREE.AnimationClip('GLB Studio Animation',duration,tracks)]}
+function buildAnimationClips(){
+ if(!animItems.length)return [];
+ const tracks=[];let duration=0;
+ for(const a of animItems){
+  duration=Math.max(duration,a.seconds);
+  const axis=new THREE.Vector3(a.axis==='x'?1:0,a.axis==='y'?1:0,a.axis==='z'?1:0);
+  // A 360-degree rotation has the same start/end orientation. Intermediate
+  // quaternion keys are essential for glTF viewers to show a full revolution.
+  const segments=Math.max(2,Math.ceil(Math.abs(a.degrees)/90));
+  const times=[],values=[];
+  for(let i=0;i<=segments;i++){
+   const f=i/segments;
+   const q=a.base.clone().multiply(new THREE.Quaternion().setFromAxisAngle(axis,THREE.MathUtils.degToRad(a.degrees*f)));
+   times.push(a.seconds*f);values.push(...q.toArray());
+  }
+  tracks.push(new THREE.QuaternionKeyframeTrack(a.node.uuid+'.quaternion',times,values));
+ }
+ return [new THREE.AnimationClip('GLB Studio Animation',duration,tracks)];
+}
 $('save').onclick=async()=>{if(!getMeshes().length){status('先にGLBを読み込んでください。');return}status('GLBを書き出しています…');try{animPlaying=false;for(const a of animItems)a.node.quaternion.copy(a.base);const data=await new GLTFExporter().parseAsync(root,{binary:true,animations:buildAnimationClips()});const url=URL.createObjectURL(new Blob([data],{type:'model/gltf-binary'}));const a=document.createElement('a');a.href=url;a.download=sourceName+'-edited.glb';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);status('GLBを保存しました。')}catch(err){status('保存に失敗しました: '+err.message)}};
 
 
