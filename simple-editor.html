@@ -34,6 +34,7 @@
 @media(min-width:801px) and (max-width:1100px){.layout.blendkit-mode{grid-template-columns:290px minmax(0,1fr)}}
 .sf-filter{display:flex;align-items:center;gap:7px;margin-top:12px;margin-bottom:4px;font-size:12px;line-height:1.5;cursor:pointer}.sf-filter input{width:16px;height:16px;flex:none;accent-color:#2563eb}.sf-filter+.note{margin:4px 0 10px}
 header button[hidden]{display:none!important}
+.sf-download{display:block;padding:8px 7px 11px;color:#2563eb!important;font-size:11px;font-weight:700;text-decoration:none!important;border-top:1px solid #e2e8f0}.sf-download:hover{text-decoration:underline!important;background:#eff6ff}
 </style></head><body>
 <header><strong>GLB Studio <small style="font-size:12px;color:#64748b">かんたん編集</small></strong><label class="upload" for="file" style="margin:0">GLBを開く</label><input id="file" type="file" accept=".glb,model/gltf-binary"><button id="save" class="primary" hidden>GLBを保存</button></header>
 <div class="layout" id="studioLayout"><aside><h2>テンプレートから始める</h2><label for="category">カテゴリ</label><select id="category" aria-label="カテゴリを選択"></select><label for="templates" style="margin-top:14px">テンプレート</label><select id="templates" aria-label="テンプレートを選択"><option value="">テンプレートを選択してください</option></select><p>テンプレートを選ぶと現在のモデルが置き換わります。</p><hr style="border:0;border-top:1px solid #e2e8f0;margin:20px 0"><div class="studio-tabs" role="tablist" aria-label="3D素材メニュー"><button type="button" class="studio-tab active" role="tab" id="tab-blendkit" aria-selected="true" aria-controls="panel-blendkit" data-tab="blendkit">素材検索</button><button type="button" class="studio-tab" role="tab" id="tab-sketchfab" aria-selected="false" aria-controls="panel-sketchfab" data-tab="sketchfab">3Dプレビュー</button><button type="button" class="studio-tab" role="tab" id="tab-my" aria-selected="false" aria-controls="panel-my" data-tab="my">マイモデル</button></div>
@@ -265,7 +266,11 @@ async function searchSketchfab(url,page=1){
    if(thumb?.url?.startsWith('https://')){const img=document.createElement('img');img.src=thumb.url;img.loading='lazy';img.alt=asset.name||'3Dモデル';button.append(img);}
    const title=document.createElement('span');title.textContent=asset.name||'名称未設定';button.append(title);
    button.addEventListener('click',()=>showSketchfab(asset.uid));
-   card.append(button);$('sfResults').append(card);
+   card.append(button);
+   if(asset.isDownloadable===true||asset.downloadable===true){
+    const download=document.createElement('a');download.className='sf-download';download.href='https://sketchfab.com/models/'+asset.uid;download.target='_blank';download.rel='noopener noreferrer';download.textContent='公式サイトでダウンロード ↗';download.setAttribute('aria-label',(asset.name||'モデル')+'の公式ダウンロードページを開く');card.append(download);
+   }
+   $('sfResults').append(card);
   }
   $('sfPages').hidden=!(sfNextUrl||sfPrevUrl||sfPage>1);
   $('sfPrev').disabled=!sfPrevUrl;$('sfNext').disabled=!sfNextUrl;
